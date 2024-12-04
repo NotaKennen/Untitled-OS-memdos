@@ -1,14 +1,14 @@
 %define ENDL 0x0D, 0x0A  
-%define self_location 0x9500
+%define self_location 0x9200
 extern kernel_main
-bits 32
+[bits 32]
 
 section .text
 global _start
 _start:
     jmp $
     ; set the cool regs
-    mov ax, self_location
+    mov ax, 0
     mov ds, ax
     mov es, ax
     mov fs, ax

@@ -2,7 +2,7 @@ org 0x7E00:0000
 %define ENDL 0x0D, 0x0A  
 [bits 16]
 
-%define kernel_address      0x9500      ; kernel address, default 0x9200
+%define kernel_address      0x9200      ; kernel address, default 0x9200
 %define kernel_size         1           ; kernel size in sectors, default 10
 %define kernel_start_pos    3           ; what sector kernel starts in, default 3
 
@@ -12,6 +12,9 @@ start:
     mov es, ax
     mov fs, ax
     mov gs, ax
+    mov ax, 0
+    mov ss, ax
+    mov sp, 0x7CFF
     jmp main
 
 ;
@@ -95,7 +98,7 @@ load_kernel:
 ; Load the GDT
 ; Define the GDT in memory
 ALIGN 8
-gdt_start:
+gdt:
     ;null segment
     dw 0x0000                ; Null Segment (Descriptor 0)
     dw 0x0000
@@ -106,7 +109,7 @@ gdt_start:
 
     ;gdt_code:
     dw 0xFFFF                ; Limit (16 bits, low part)
-    dw 0x9500                ; Base Address (16 bits, low part)
+    dw 0x0000                ; Base Address (16 bits, low part)
     db 0x00                  ; Base Address (8 bits, middle part)
     db 0x9A                  ; Access Byte: Code Segment, Executable, Readable
     db 0xCF                  ; Flags: 4 KB Granularity, 32-bit mode
@@ -114,7 +117,7 @@ gdt_start:
 
     ;gdt_data:
     dw 0xFFFF                ; Limit (16 bits, low part)
-    dw 0x8200                ; Base Address (16 bits, low part)
+    dw 0x0000                ; Base Address (16 bits, low part)
     db 0x00                  ; Base Address (8 bits, middle part)
     db 0x92                  ; Access Byte: Data Segment, Read/Write
     db 0xCF                  ; Flags: 4 KB Granularity, 32-bit mode
@@ -123,36 +126,36 @@ gdt_start:
     gdt_end:
 
     ; Create GDT descriptor
-    ALIGN 8
     gdt_descriptor:
-        dw gdt_end - gdt_start - 1 ; Size of GDT (16 bits)
-        dd gdt_start               ; Base address of GDT (32 bits)
+        dw gdt_end - gdt - 1   ; Size of GDT (16 bits)
+        dd gdt              ; Base address of GDT (32 bits)
 
 ; Load the GDT
 enable_pm:
     cli                        ; Disable interrupts
     lgdt [gdt_descriptor]      ; Load GDT using LGDT
 
-    mov eax, 0x10              ; Load Data Segment (GDT entry 2: offset 0x10)
+    mov eax, cr0
+    or eax, 0x1                ; Set PE bit (bit 0)
+    mov cr0, eax
+
+    jmp 0x010:flush_pipeline   ; Jump to Code Segment (GDT entry 1: offset 0x08)
+
+[bits 32]
+flush_pipeline:
+    jmp $
+    mov ax, 0x10               ; Load Data Segment (GDT entry 2: offset 0x10)
     mov ds, ax                 ; Update Data Segment Register
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
-
-    mov eax, cr0
-    or eax, 0x1                ; Set PE bit (bit 0)
-    mov cr0, eax
-
-    jmp 0x08:.flush_pipeline   ; Jump to Code Segment (GDT entry 1: offset 0x08)
-
-[bits 32]
-.flush_pipeline:
+    jmp $
     ; Continue execution in protected mode
-    jmp kernel_address
+    jmp kernel_address:0000
 [bits 16]
 ;
-; Main load function
+; Main load function 
 ;
 main:
     ; Print the entry message
