@@ -97,7 +97,6 @@ load_kernel:
 ;
 ; Load the GDT
 ; Define the GDT in memory
-ALIGN 8
 gdt:
     ;null segment
     dw 0x0000                ; Null Segment (Descriptor 0)
@@ -139,7 +138,7 @@ enable_pm:
     or eax, 0x1                ; Set PE bit (bit 0)
     mov cr0, eax
 
-    jmp 0x010:flush_pipeline   ; Jump to Code Segment (GDT entry 1: offset 0x08)
+    jmp 0x08:flush_pipeline   ; Jump to Code Segment (GDT entry 1: offset 0x08)
 
 [bits 32]
 flush_pipeline:
