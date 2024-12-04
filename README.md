@@ -1,0 +1,1 @@
+This is an operating system I'm working on. Currently untitled, nicknamed memdos, I will probably come up with a better name when it's closer to being done. At the time of writing, it is only a bootloader and there is no actual kernel.
