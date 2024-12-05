@@ -2,7 +2,7 @@ ENTRY(start)
 
 SECTIONS
 {
-	. = 0x9200;
+	. = 0x0;
 
 	.text BLOCK(1):
 	{
