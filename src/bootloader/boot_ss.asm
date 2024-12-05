@@ -7,7 +7,7 @@ start:
 ;
 ; GDT
 ;
-gdt:
+gdt_data:
     ;null segment
     dd 0x0000                 ; Null Segment (Descriptor 0)
     dd 0x0000
@@ -15,24 +15,24 @@ gdt:
     ;gdt_code:
     dw 0xFFFF                 ; Limit (16 bits, low part)
     dw 0x0000                 ; Base Address (16 bits, low part)
-    db 0x40                   ; Base Address (8 bits, middle part)
-    db 0x9A                   ; Access Byte: Code Segment, Executable, Readable
-    db 0xCF                   ; Flags: 4 KB Granularity, 32-bit mode
+    db 0x00                   ; Base Address (8 bits, middle part)
+    db 10011010b              ; Access Byte: Code Segment, Executable, Readable
+    db 11001111b              ; Flags: 4 KB Granularity, 32-bit mode
     db 0x00                   ; Base Address (8 bits, high part)
     
     ;gdt_data:
     dw 0xFFFF                 ; Limit (16 bits, low part)
     dw 0x0000                 ; Base Address (16 bits, low part)
-    db 0x80                   ; Base Address (8 bits, middle part)
-    db 0x92                   ; Access Byte: Data Segment, Read/Write
-    db 0xCF                   ; Flags: 4 KB Granularity, 32-bit mode
+    db 0x00                   ; Base Address (8 bits, middle part)
+    db 10010010b              ; Access Byte: Data Segment, Read/Write
+    db 11001111b              ; Flags: 4 KB Granularity, 32-bit mode
     db 0x00                   ; Base Address (8 bits, high part)
     
     gdt_end:
-    ; Create GDT descriptor
-    gdt_descriptor:
-        dw gdt_end - gdt - 1  ; Size of GDT (16 bits)
-        dd gdt                ; Base address of GDT (32 bits)
+; Create GDT descriptor
+gdt_descriptor:
+    dw gdt_end - gdt_data - 1  ; Size of GDT (16 bits)
+    dd gdt_data                ; Base address of GDT (32 bits)
 
 ;
 ; Loads and establishes the GDT
@@ -40,7 +40,9 @@ gdt:
 ;
 load_gdt:
     cli
-    lgdt [gdt]
+    pusha
+    lgdt [gdt_descriptor]
+    popa
     ret
 ;
 
@@ -106,6 +108,9 @@ load_kernel:
 ; No parameters
 ;
 enable_pm:
+    ; double check that interrupts are disabled
+    cli
+
     ; Enable PM register
     mov eax, cr0
     or eax, 1
