@@ -43,7 +43,7 @@ load_ssb:
     int 13h                     ; BIOS interrupt
     jc .read_error              ; If Carry Flag is set, handle the error
 
-    jmp 0x800:0000
+    jmp ssb_address/16 :0000
 
 
 .read_error:

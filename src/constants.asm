@@ -6,7 +6,7 @@
 ;
 %define mbr_address 0x7C00
 %define ssb_address 0x8000
-%define kernel_address 0x0000 ; //TODO: invent some space for the kernel
+%define kernel_address 0x9000
 %define stack_address 0x7C00
 
 ;

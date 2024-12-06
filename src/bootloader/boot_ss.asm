@@ -13,11 +13,11 @@ main:
     mov si, msg_ok
     call print
 
-    ; Load kernel //TODO: Load kernel
+    ; Load kernel //TODO: Enable A20 for use with non-emulators
     mov si, msg_loading_kernel
     call print
     call load_kernel
-    mov si, msg_skip
+    mov si, msg_ok
     call print
 
     ; Load GDT and enable PM
@@ -25,9 +25,6 @@ main:
     call print
     call InstallGDT
     call enable_pm ; response will be sent in Kernel
-    
-    ; Move to kernel
-    ;(Load it first)
 
     jmp $
 
@@ -61,10 +58,29 @@ print:
 ; No parameters
 ;
 load_kernel:
+    mov ah, 02h                     ; Function: Read Sectors
+    mov al, kernel_sector_length    ; Number of sectors to read (adjust as needed)
+    mov ch, 0                       ; Cylinder number (0 for first track)
+    mov cl, kernel_sector_start     ; Sector number (1: MBR, 2: SSB, 3: Kernel)
+    mov dh, 0                       ; Head number (0 = first head)
+    mov dl, 0                       ; Drive number (0 = floppy A)
+
+    mov bx, kernel_address / 16     ; Load the second stage at address in memory
+    mov es, bx                      ; Set ES to point to segment
+    xor bx, bx
+    int 13h                         ; BIOS interrupt
+    jc .read_error                  ; If Carry Flag is set, handle the error
+
     ret
+    
+    .read_error
+        mov si, msg_loading_kernel_err
+        call print
+        jmp $
+
 
 ;
-; Enables PM, does not jump to kernel etc
+; Enables PM, also jumps to kernel
 ; No parameters
 ;
 enable_pm:
@@ -91,18 +107,13 @@ enable_pm:
 ;
 ; System messages
 ;
-msg_ok:             db 'OK', ENDL, 0
-msg_skip:           db 'SKIP', ENDL, 0
-msg_loading_kernel: db 'Loading kernel... ', 0
-msg_enabling_pm:    db 'Enabling protected mode... ', 0
-
-
+msg_ok:                     db 'OK', ENDL, 0
+msg_loading_kernel:         db 'Loading kernel... ', 0
+msg_loading_kernel_err:     db 'couldnt load kernel!', ENDL, 0
+msg_enabling_pm:            db 'Enabling protected mode... ', 0
 
 ;*************************************************
 ; GDT
-;*************************************************
-
-[BITS 16]
 
 InstallGDT:             ; load GDT into GDTR
     cli
@@ -110,72 +121,42 @@ InstallGDT:             ; load GDT into GDTR
     sti
     ret
 
-EnterUnrealMode:
-    cli
-    mov     eax, cr0
-    or      eax, 1
-    mov     cr0, eax
-    jmp dword 0x08:TempPM
-
-[BITS 32]
-
-TempPM:
-    mov     ax, 0x10
-    mov     fs, ax
-    jmp dword 0x18:TempPM16
-
-[BITS 16]
-
-TempPM16:
-    mov     eax, cr0
-    and     eax, 0xFFFFFFFE
-    mov     cr0, eax
-    jmp dword 0x0000:Back2RM
-
-Back2RM:
-    sti
-    ret
-
-;******************************************************************************
-; Global Descriptor Table (GDT) ;
-;******************************************************************************
-
 gdt_data:
 
-NULL_Desc:              ; null descriptor (necessary)
-    dd    0
-    dd    0
+    NULL_Desc:              ; null descriptor (necessary)
+        dd    0
+        dd    0
 
-CODE_Desc:
-    dw    0xFFFF        ; segment length  bits 0-15 ("limit")
-    dw    0             ; segment base    byte 0,1
-    db    0             ; segment base    byte 2
-    db    10011010b     ; access rights
-    db    11001111b     ; bit 7-4: 4 flag bits:  granularity, default operation size bit,
-                        ; 2 bits available for OS
-                        ; bit 3-0: segment length bits 16-19
-    db    0             ; segment base    byte 3
+    CODE_Desc:
+        dw    0xFFFF        ; segment length  bits 0-15 ("limit")
+        dw    0             ; segment base    byte 0,1
+        db    0             ; segment base    byte 2
+        db    10011010b     ; access rights
+        db    11001111b     ; bit 7-4: 4 flag bits:  granularity, default operation size bit,
+                            ; 2 bits available for OS
+                            ; bit 3-0: segment length bits 16-19
+        db    0             ; segment base    byte 3
 
-DATA_Desc:
-    dw    0xFFFF        ; segment length  bits 0-15
-    dw    0             ; segment base    byte 0,1
-    db    0             ; segment base    byte 2
-    db    10010010b     ; access rights
-    db    11001111b     ; bit 7-4: 4 flag bits:  granularity,
-                        ; big bit (0=USE16-Segm., 1=USE32-Segm.), 2 bits avail.
-                        ; bit 3-0: segment length bits 16-19
-    db    0             ; segment base    byte 3
+    DATA_Desc:
+        dw    0xFFFF        ; segment length  bits 0-15
+        dw    0             ; segment base    byte 0,1
+        db    0             ; segment base    byte 2
+        db    10010010b     ; access rights
+        db    11001111b     ; bit 7-4: 4 flag bits:  granularity,
+                            ; big bit (0=USE16-Segm., 1=USE32-Segm.), 2 bits avail.
+                            ; bit 3-0: segment length bits 16-19
+        db    0             ; segment base    byte 3
 
-CODE16_Desc:
-    dw    0xFFFF
-    dw    0
-    db    0
-    db    10011010b
-    db    00001111b
-    db    0
+    CODE16_Desc:
+        dw    0xFFFF
+        dw    0
+        db    0
+        db    10011010b
+        db    00001111b
+        db    0
 
-end_of_gdt:
-gdt_limit_and_base:
+    end_of_gdt:
+    gdt_limit_and_base:
     dw end_of_gdt - gdt_data - 1    ; limit (size/length of GDT)
     dd gdt_data                     ; base of GDT
 
