@@ -34,25 +34,17 @@ $(BUILD_DIR)/bootloader_ss.bin: always
 	$(ASM) $(SRC_DIR)/bootloader/boot_ss.asm -f bin -o $(BUILD_DIR)/bootloader_ss.bin
 
 #
-# Kernel
-#
-#kernel: $(BUILD_DIR)/kernel.bin
-
-#$(BUILD_DIR)/kernel.bin: always 
-#	$(ASM) $(SRC_DIR)/kernel/main.asm -f bin -o $(BUILD_DIR)/kernel.bin
-
-#
 # Always
 #
 always:
 	mkdir -p $(BUILD_DIR) 
 
 #
-# Kernel ?
+# Kernel 
 #
 kernel:
 	$(ASM) -f elf32 $(SRC_DIR)/kernel/kernelboot.asm -o $(BUILD_DIR)/kernelboot.o
-	$(CRCPATH)/i686-elf-gcc -m32 -c $(SRC_DIR)/kernel/kernel.c -o $(BUILD_DIR)/kernel.o
+	$(CRCPATH)/i686-elf-gcc -ffreestanding -m32 -c $(SRC_DIR)/kernel/kernel.c -o $(BUILD_DIR)/kernel.o
 	$(CRCPATH)/i686-elf-ld -m elf_i386 -Ttext 0x0 -o $(BUILD_DIR)/kernel.elf $(BUILD_DIR)/kernelboot.o $(BUILD_DIR)/kernel.o
 	objcopy -O binary $(BUILD_DIR)/kernel.elf $(BUILD_DIR)/kernel.bin
 

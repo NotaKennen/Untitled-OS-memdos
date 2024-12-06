@@ -102,7 +102,7 @@ enable_pm:
         mov es, ax
         mov fs, ax
         mov gs, ax
-        jmp $
+        jmp 0x08:0x9000
     bits 16
 ;
 ; System messages
