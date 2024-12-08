@@ -20,6 +20,13 @@ main:
     mov si, msg_ok
     call print
 
+    ; Disable the blinking cursor
+    mov ah, 0x01    ; BIOS function to set cursor shape
+    mov ch, 0x20    ; Set cursor start scanline to a value greater than end scanline
+    mov cl, 0x00    ; Cursor end scanline (doesn't matter because it's hidden)
+    int 0x10        ; Call BIOS interrupt
+
+
     ; Load GDT and enable PM
     mov si, msg_enabling_pm
     call print
