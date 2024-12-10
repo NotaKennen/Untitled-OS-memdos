@@ -5,6 +5,12 @@ CRCPATH=$(HOME)/opt/cross/bin
 SRC_DIR=src
 BUILD_DIR=build
 
+# Find all C files in the kernel folder and subfolders
+C_SOURCES = $(shell find $(SRC_DIR) -name "*.c")
+
+# Find all header files in the kernel folder and subfolders
+C_HEADERS = $(shell find $(SRC_DIR) -name "*.h")
+
 .PHONY: all floppy_image kernel bootloader clean always
 
 all: floppy_image
@@ -42,10 +48,16 @@ always:
 #
 # Kernel 
 #
-kernel:
-	$(ASM) -f elf32 $(SRC_DIR)/kernel/kernelboot.asm -o $(BUILD_DIR)/kernelboot.o
-	$(CRCPATH)/i686-elf-gcc -ffreestanding -m32 -c $(SRC_DIR)/kernel/kernel.c -o $(BUILD_DIR)/kernel.o
-	$(CRCPATH)/i686-elf-ld -m elf_i386 -Ttext 0x0 -o $(BUILD_DIR)/kernel.elf $(BUILD_DIR)/kernelboot.o $(BUILD_DIR)/kernel.o
+kernel: $(C_SOURCES) $(C_HEADERS)
+	$(ASM) -f elf32 $(SRC_DIR)/kernel/main/kernelboot.asm -o $(BUILD_DIR)/kernelboot.o
+
+# compile all the c files into one big object file (this is very good practice trust me)
+	for file in $(C_SOURCES); do \
+		$(CRCPATH)/i686-elf-gcc -ffreestanding -m32 -c $$file -o $(BUILD_DIR)/$$(basename $$file .c).o; \
+	done
+
+
+	$(CRCPATH)/i686-elf-ld -m elf_i386 -Ttext 0x0 -o $(BUILD_DIR)/kernel.elf $(BUILD_DIR)/kernelboot.o $(BUILD_DIR)/*.o
 	objcopy -O binary $(BUILD_DIR)/kernel.elf $(BUILD_DIR)/kernel.bin
 
 #
