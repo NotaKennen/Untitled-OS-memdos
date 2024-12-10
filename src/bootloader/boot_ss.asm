@@ -77,10 +77,9 @@ load_kernel:
     xor bx, bx
     int 13h                         ; BIOS interrupt
     jc .read_error                  ; If Carry Flag is set, handle the error
-
     ret
     
-    .read_error
+    .read_error:
         mov si, msg_loading_kernel_err
         call print
         jmp $
